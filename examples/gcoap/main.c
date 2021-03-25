@@ -14,7 +14,7 @@
  * @brief       gcoap example
  *
  * @author      Ken Bannister <kb2ma@runbox.com>
- *ciao
+ *sbenf
  * @}
  */
 
