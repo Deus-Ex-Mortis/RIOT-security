@@ -25,6 +25,7 @@ USEMODULE += gnrc_ipv6
 USEMODULE += gnrc_icmpv6_echo
 # Use minimal standard PRNG
 USEMODULE += prng_minstd
+USEMODULE += gnrc_udp
 
 CFLAGS += -DLOG_LEVEL=LOG_NONE  # disable log output
 CFLAGS += -DCONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF=2 \

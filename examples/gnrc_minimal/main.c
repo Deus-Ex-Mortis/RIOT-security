@@ -24,6 +24,9 @@
 #include "net/ipv6/addr.h"
 #include "net/gnrc.h"
 #include "net/gnrc/netif.h"
+#include "net/gnrc/netreg.h"
+#include "thread.h"
+#include "net/gnrc/pktbuf.h"
 
 int main(void)
 {
@@ -47,6 +50,15 @@ int main(void)
             printf("My address is %s\n", ipv6_addr);
         }
     }
+
+	msg_t msg_queue[4];
+	msg_init_queue(msg_queue, 4);
+	gnrc_netreg_entry_t server = GNRC_NETREG_ENTRY_INIT_PID(8888, thread_getpid());
+	gnrc_netreg_register(GNRC_NETTYPE_UDP, &server);
+	msg_t msg;
+	msg_receive(&msg);
+	gnrc_pktsnip_t *pkt = (gnrc_pktsnip_t *)msg.content.ptr;
+	gnrc_pktbuf_release(pkt);
 
     /* main thread exits */
     return 0;
