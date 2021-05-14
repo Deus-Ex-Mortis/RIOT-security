@@ -23,9 +23,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
+#include "puf_sram.h"
 #include "net/gcoap.h"
 #include "od.h"
 #include "fmt.h"
+#include "hashes/sha256.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
@@ -40,11 +43,15 @@ static void _resp_handler(const gcoap_request_memo_t *memo, coap_pkt_t* pdu,
                           const sock_udp_ep_t *remote);
 static ssize_t _stats_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx);
 static ssize_t _riot_board_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx);
+static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx);
+static ssize_t _key(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx);
 
 /* CoAP resources. Must be sorted by path (ASCII order). */
 static const coap_resource_t _resources[] = {
-    { "/cli/stats", COAP_GET | COAP_PUT, _stats_handler, NULL },
-    { "/riot/board", COAP_GET, _riot_board_handler, NULL },
+        { "/auth", COAP_GET, _auth_handler, NULL },
+        { "/cli/stats", COAP_GET | COAP_PUT, _stats_handler, NULL },
+        { "/key", COAP_GET, _key, NULL },
+        { "/riot/board", COAP_GET, _riot_board_handler, NULL },
 };
 
 static const char *_link_params[] = {
@@ -211,6 +218,78 @@ static ssize_t _stats_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *c
     }
 
     return 0;
+}
+
+static ssize_t _key(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx) {
+    (void) ctx;
+    char chiave[10];
+    sprintf(chiave, "%ld\n", (long)puf_sram_seed);
+    const void *key = (const void *)chiave;
+
+    puts("\nInvio Chiave");
+
+    return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
+                             COAP_FORMAT_TEXT, (uint8_t *) key, strlen(key));
+}
+
+const char *succ = "successo";
+
+static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx) {
+    (void) ctx;
+
+    char *pw = "password";
+    char *input = (char *)pdu->payload;
+    int res = strncmp(pw,input,pdu->payload_len);
+    //printf("%d\n", res);
+
+    if (pdu->payload_len != strlen(pw)) {
+        res = 99;
+    }
+
+    if (res == 0) {
+        return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
+                                 COAP_FORMAT_TEXT, (uint8_t *) succ, strlen(succ));
+    }
+
+    //Inizia hmac
+    static hmac_context_t sha256;
+    uint8_t digest[SHA256_DIGEST_LENGTH];
+    uint32_t result = COAP_CODE_204;
+
+    char chiave[10];
+    sprintf(chiave, "%ld\n", (long)puf_sram_seed);
+    const void *key = (const void *)chiave;
+
+    puts("\nHMAC(): init");
+    hmac_sha256_init(&sha256, key, strlen(key));
+
+    puts("HMAC(): update");
+    hmac_sha256_update(&sha256, pdu->payload, pdu->payload_len);
+
+    size_t result_len = 0;
+
+    puts("HMAC(): finish");
+    hmac_sha256_final(&sha256, digest);
+    result_len = SHA256_DIGEST_LENGTH * 2;
+
+    ssize_t reply_len = coap_build_reply(pdu, result, buf, len, 0);
+    uint8_t *pkt_pos = (uint8_t*)pdu->hdr + reply_len;
+
+    //puts("Start: Test random number generator");
+
+    //printf("Success: Data for puf_sram_seed: [0x%08" PRIX32 "]\n", puf_sram_seed);
+
+    //puts("End: Test finished");
+
+    if (result_len) {
+        *pkt_pos++ = 0xFF;
+        pkt_pos += fmt_bytes_hex((char *)pkt_pos, digest, sizeof(digest));
+    }
+
+    return pkt_pos - (uint8_t*)pdu->hdr;
+
+    //return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
+                             //COAP_FORMAT_TEXT, (uint8_t*)pdu->payload, pdu->payload_len);
 }
 
 static ssize_t _riot_board_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx)

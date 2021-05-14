@@ -11,7 +11,7 @@ RIOTBASE ?= $(CURDIR)/../..
 
 # Include packages that pull up and auto-init the link layer.
 # NOTE: 6LoWPAN will be included if IEEE802.15.4 devices are present
-USEMODULE += gnrc_netdev_default
+#USEMODULE += gnrc_netdev_default
 USEMODULE += auto_init_gnrc_netif
 # Specify the mandatory networking modules
 USEMODULE += gnrc_ipv6_default
@@ -19,6 +19,8 @@ USEMODULE += gcoap
 # Additional networking modules that can be dropped if not needed
 USEMODULE += gnrc_icmpv6_echo
 
+USEMODULE += gnrc_ipv6_router_default
+USEMODULE += sock_udp
 # Required by gcoap example
 USEMODULE += od
 USEMODULE += fmt
@@ -26,6 +28,37 @@ USEMODULE += fmt
 USEMODULE += shell
 USEMODULE += shell_commands
 USEMODULE += ps
+
+USEMODULE += hashes
+
+include $(RIOTBASE)/tests/Makefile.tests_common
+
+FEATURES_REQUIRED += puf_sram
+DISABLE_MODULE += test_utils_interactive_sync
+
+# Change this to 0 to not use ethos
+USE_ETHOS ?= 1
+
+ifeq (1,$(USE_ETHOS))
+  USEMODULE += stdio_ethos
+  USEMODULE += gnrc_uhcpc
+
+  # ethos baudrate can be configured from make command
+  ETHOS_BAUDRATE ?= 115200
+  CFLAGS += -DETHOS_BAUDRATE=$(ETHOS_BAUDRATE)
+
+  # make sure ethos and uhcpd are built
+  TERMDEPS += host-tools
+
+  # For local testing, run
+  #
+  #     $ cd dist/tools/ethos; sudo ./setup_network.sh riot0 2001:db8::0/64
+  #
+  #... in another shell and keep it running.
+  export TAP ?= riot0
+  TERMPROG = $(RIOTTOOLS)/ethos/ethos
+  TERMFLAGS = $(TAP) $(PORT)
+endif
 
 # Comment this out to disable code in RIOT that does safety checking
 # which is not needed in a production environment but helps in the
@@ -53,3 +86,12 @@ ifndef CONFIG_KCONFIG_MODULE_GCOAP
 GCOAP_RESEND_BUFS_MAX ?= 2
 CFLAGS += -DCONFIG_GCOAP_RESEND_BUFS_MAX=$(GCOAP_RESEND_BUFS_MAX)
 endif
+
+.PHONY: host-tools
+
+host-tools:
+	$(Q)env -u CC -u CFLAGS $(MAKE) -C $(RIOTTOOLS)
+
+#CONFIG_GNRC_IPV6_NIB_SLAAC=1
+
+include $(RIOTMAKE)/default-radio-settings.inc.mk
