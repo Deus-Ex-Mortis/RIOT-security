@@ -237,7 +237,7 @@ const char *succ = "successo";
 static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx) {
     (void) ctx;
 
-    char *pw = "password";
+    /*char *pw = "password";
     char *input = (char *)pdu->payload;
     int res = strncmp(pw,input,pdu->payload_len);
     //printf("%d\n", res);
@@ -249,28 +249,92 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     if (res == 0) {
         return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
                                  COAP_FORMAT_TEXT, (uint8_t *) succ, strlen(succ));
+    }*/
+
+    int i = 0;
+    char payload_mio[pdu->payload_len];
+    for (;i<=pdu->payload_len;i++) {
+        payload_mio[i] = pdu->payload[i];
+        //printf("%c\n", rand[i]);
     }
 
-    //Inizia hmac
-    static hmac_context_t sha256;
-    uint8_t digest[SHA256_DIGEST_LENGTH];
-    uint32_t result = COAP_CODE_204;
+    int a = 0;
+    char * rand = "ciao";
+    char * seq = "ciao";
+    char * autn = "ciao";
+    char * token = strtok(payload_mio, "#");
+    // loop through the string to extract all other tokens
+    while( token != NULL ) {
+        //printf(" %s\n", token); //printing each token
+        if (a == 0) {
+            rand = token;
+            printf("%s\n", rand);
+        }
+        if (a == 1) {
+            seq = token;
+            printf("%s\n", seq);
+        }
+        if (a == 2) {
+            autn = token;
+            printf("%s\n", autn);
+        }
+        a++;
+        token = strtok(NULL, "#");
+    }
+
+    //int verificato = 1;
+    // TODO if sul verificato, hmac di autn, concatenazione con strcat
+
+    char * xres_string = "XRES";
+    puts("uno");
+    char * autn_string = "AUTN";
+    printf("%s\n", autn_string);
+    char * xres_mid = strcat(seq,xres_string);
+    puts("tre");
+    char * autn_mid = strcat(rand, autn_string);
+    printf("%s\n", autn_mid);
+    char * message_xres = strcat(rand, xres_mid);
+    printf("%s\n", message_xres);
+    char * message_autn = strcat(seq, autn_mid);
+    printf("%s", message_autn);
+
+    /*
+    static hmac_context_t sha2561;
+    uint8_t digest1[SHA256_DIGEST_LENGTH];*/
 
     char chiave[10];
     sprintf(chiave, "%ld\n", (long)puf_sram_seed);
     const void *key = (const void *)chiave;
 
-    puts("\nHMAC(): init");
-    hmac_sha256_init(&sha256, key, strlen(key));
+    /*puts("\nHMAC(): init");
+    hmac_sha256_init(&sha2561, key, strlen(key));
 
     puts("HMAC(): update");
-    hmac_sha256_update(&sha256, pdu->payload, pdu->payload_len);
-
-    size_t result_len = 0;
+    hmac_sha256_update(&sha2561, message_autn, strlen(message_autn));
 
     puts("HMAC(): finish");
-    hmac_sha256_final(&sha256, digest);
-    result_len = SHA256_DIGEST_LENGTH * 2;
+    hmac_sha256_final(&sha2561, digest1);*/
+
+    size_t result_len = 0;
+    uint32_t result = COAP_CODE_204;
+    uint8_t digest[SHA256_DIGEST_LENGTH];
+    //int res = strcmp((const char *)digest1,(const char *)autn);
+    //if (res == 0) {
+        puts("ciao");
+        //Inizia hmac
+        static hmac_context_t sha256;
+
+        puts("\nHMAC(): init");
+        hmac_sha256_init(&sha256, key, strlen(key));
+
+        puts("HMAC(): update");
+        hmac_sha256_update(&sha256, message_xres, strlen(message_xres));
+
+        puts("HMAC(): finish");
+        hmac_sha256_final(&sha256, digest);
+        result_len = SHA256_DIGEST_LENGTH * 2;
+    //}
+
 
     ssize_t reply_len = coap_build_reply(pdu, result, buf, len, 0);
     uint8_t *pkt_pos = (uint8_t*)pdu->hdr + reply_len;

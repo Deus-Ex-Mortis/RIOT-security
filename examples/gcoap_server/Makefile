@@ -31,6 +31,8 @@ USEMODULE += ps
 
 USEMODULE += hashes
 
+CFLAGS += -DTHREAD_STACKSIZE_MAIN=\(3*THREAD_STACKSIZE_DEFAULT\)
+
 include $(RIOTBASE)/tests/Makefile.tests_common
 
 FEATURES_REQUIRED += puf_sram
