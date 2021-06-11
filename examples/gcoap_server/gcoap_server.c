@@ -259,9 +259,9 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     }
 
     int a = 0;
-    char * rand = "ciao";
-    char * seq = "ciao";
-    char * autn = "ciao";
+    char * rand = "a";
+    char * seq = "b";
+    char * autn = "c";
     char * token = strtok(payload_mio, "#");
     // loop through the string to extract all other tokens
     while( token != NULL ) {
@@ -285,18 +285,24 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     //int verificato = 1;
     // TODO if sul verificato, hmac di autn, concatenazione con strcat
 
+    char mid_str[8];
+    char final_str[15];
     char * xres_string = "XRES";
     puts("uno");
-    char * autn_string = "AUTN";
-    printf("%s\n", autn_string);
-    char * xres_mid = strcat(seq,xres_string);
-    puts("tre");
-    char * autn_mid = strcat(rand, autn_string);
-    printf("%s\n", autn_mid);
-    char * message_xres = strcat(rand, xres_mid);
-    printf("%s\n", message_xres);
-    char * message_autn = strcat(seq, autn_mid);
-    printf("%s", message_autn);
+    //char * autn_string = "AUTN";
+    //puts("due");
+    strcat(mid_str,seq);
+    printf("%s\n", mid_str);
+    strcat(mid_str,xres_string);
+    printf("%s\n", mid_str);
+    //char mid_str = strcat(rand, autn_string);
+    //printf("%s\n", autn_mid);
+    strcat(final_str, rand);
+    printf("%s\n", final_str);
+    strcat(final_str, mid_str);
+    printf("%s\n", final_str);
+    //char final_str = strcat(seq, autn_mid);
+    //printf("%s", message_autn);
 
     /*
     static hmac_context_t sha2561;
@@ -328,7 +334,7 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
         hmac_sha256_init(&sha256, key, strlen(key));
 
         puts("HMAC(): update");
-        hmac_sha256_update(&sha256, message_xres, strlen(message_xres));
+        hmac_sha256_update(&sha256, final_str, strlen(final_str));
 
         puts("HMAC(): finish");
         hmac_sha256_final(&sha256, digest);
