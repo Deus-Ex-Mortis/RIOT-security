@@ -259,35 +259,41 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     }
 
     int a = 0;
-    char * rand = "a";
-    char * seq = "b";
-    char * autn = "c";
+    char  random_num[6];
+    char seq[3];
+    char autn[64];
     char * token = strtok(payload_mio, "#");
     // loop through the string to extract all other tokens
     while( token != NULL ) {
         //printf(" %s\n", token); //printing each token
         if (a == 0) {
-            rand = token;
-            printf("%s\n", rand);
+            strcpy(random_num, token);
+            printf("%s\n", random_num);
         }
         if (a == 1) {
-            seq = token;
+            strcpy(seq, token);
             printf("%s\n", seq);
         }
         if (a == 2) {
-            autn = token;
+            strcpy(autn, token);
             printf("%s\n", autn);
         }
         a++;
         token = strtok(NULL, "#");
     }
 
-    //int verificato = 1;
-    // TODO if sul verificato, hmac di autn, concatenazione con strcat
+    if (!strcmp(seq, "0")) {
+        FILE *f = fopen("seq.txt", "w");
+        fprintf(f, "%c\n", seq[0]);
+        fclose(f);
+        puts("file funge");
+    }
+
+    // TODO leggere e scrivere sequenza da file
 
     char mid_str[8];
     char final_str[15];
-    char * xres_string = "XRES";
+    char xres_string[] = "XRES";
     puts("uno");
     //char * autn_string = "AUTN";
     //puts("due");
@@ -297,10 +303,11 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     printf("%s\n", mid_str);
     //char mid_str = strcat(rand, autn_string);
     //printf("%s\n", autn_mid);
-    strcat(final_str, rand);
+    strcat(final_str, random_num);
     printf("%s\n", final_str);
     strcat(final_str, mid_str);
     printf("%s\n", final_str);
+    printf("%d\n", strlen(final_str));
     //char final_str = strcat(seq, autn_mid);
     //printf("%s", message_autn);
 
