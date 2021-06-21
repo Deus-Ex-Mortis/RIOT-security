@@ -251,17 +251,18 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
                                  COAP_FORMAT_TEXT, (uint8_t *) succ, strlen(succ));
     }*/
 
-    int i = 0;
-    char payload_mio[pdu->payload_len];
+    /*int i = 0;
     for (;i<=pdu->payload_len;i++) {
         payload_mio[i] = pdu->payload[i];
         //printf("%c\n", rand[i]);
-    }
+    }*/
+    char payload_mio[pdu->payload_len];
+    memcpy(payload_mio, pdu->payload, pdu->payload_len);
 
     int a = 0;
-    char  random_num[6];
-    char seq[3];
-    char autn[64];
+    char  random_num[6] = {0};
+    char seq[3] = {0};
+    char autn[64] = {0};
     char * token = strtok(payload_mio, "#");
     // loop through the string to extract all other tokens
     while( token != NULL ) {
@@ -282,17 +283,17 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
         token = strtok(NULL, "#");
     }
 
-    if (!strcmp(seq, "0")) {
+    /*if (!strcmp(seq, "0")) {
         FILE *f = fopen("seq.txt", "w");
         fprintf(f, "%c\n", seq[0]);
         fclose(f);
         puts("file funge");
-    }
+    }*/
 
     // TODO leggere e scrivere sequenza da file
 
-    char mid_str[8];
-    char final_str[15];
+    char mid_str[8] = {0};
+    char final_str[15] = {0};
     char xres_string[] = "XRES";
     puts("uno");
     //char * autn_string = "AUTN";
@@ -328,12 +329,11 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     puts("HMAC(): finish");
     hmac_sha256_final(&sha2561, digest1);*/
 
-    size_t result_len = 0;
-    uint32_t result = COAP_CODE_204;
+    //size_t result_len = 0;
+    //uint32_t result = COAP_CODE_204;
     uint8_t digest[SHA256_DIGEST_LENGTH];
     //int res = strcmp((const char *)digest1,(const char *)autn);
     //if (res == 0) {
-        puts("ciao");
         //Inizia hmac
         static hmac_context_t sha256;
 
@@ -343,14 +343,16 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
         puts("HMAC(): update");
         hmac_sha256_update(&sha256, final_str, strlen(final_str));
 
-        puts("HMAC(): finish");
-        hmac_sha256_final(&sha256, digest);
-        result_len = SHA256_DIGEST_LENGTH * 2;
+    puts("HMAC(): finish");
+    hmac_sha256_final(&sha256, digest);
+    //result_len = SHA256_DIGEST_LENGTH * 2;
     //}
 
+    gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+    coap_opt_add_format(pdu, COAP_FORMAT_TEXT);
+    size_t resp_len = coap_opt_finish(pdu, COAP_OPT_FINISH_PAYLOAD);
 
-    ssize_t reply_len = coap_build_reply(pdu, result, buf, len, 0);
-    uint8_t *pkt_pos = (uint8_t*)pdu->hdr + reply_len;
+    return resp_len + sizeof(digest);
 
     //puts("Start: Test random number generator");
 
@@ -358,12 +360,12 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
 
     //puts("End: Test finished");
 
-    if (result_len) {
+    /*if (result_len) {
         *pkt_pos++ = 0xFF;
         pkt_pos += fmt_bytes_hex((char *)pkt_pos, digest, sizeof(digest));
     }
 
-    return pkt_pos - (uint8_t*)pdu->hdr;
+    return pkt_pos - (uint8_t*)pdu->hdr;*/
 
     //return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
                              //COAP_FORMAT_TEXT, (uint8_t*)pdu->payload, pdu->payload_len);
