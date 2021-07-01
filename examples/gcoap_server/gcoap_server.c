@@ -32,6 +32,127 @@
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
+#include "board.h" /* MTD_0 is defined in board.h */
+
+/* Configure MTD device for SD card if none is provided */
+#if !defined(MTD_0) && MODULE_MTD_SDCARD
+#include "mtd_sdcard.h"
+#include "sdcard_spi.h"
+#include "sdcard_spi_params.h"
+
+#define SDCARD_SPI_NUM ARRAY_SIZE(sdcard_spi_params)
+
+/* SD card devices are provided by drivers/sdcard_spi/sdcard_spi.c */
+extern sdcard_spi_t sdcard_spi_devs[SDCARD_SPI_NUM];
+
+/* Configure MTD device for the first SD card */
+static mtd_sdcard_t mtd_sdcard_dev = {
+    .base = {
+        .driver = &mtd_sdcard_driver
+    },
+    .sd_card = &sdcard_spi_devs[0],
+    .params = &sdcard_spi_params[0],
+};
+static mtd_dev_t *mtd0 = (mtd_dev_t*)&mtd_sdcard_dev;
+#define MTD_0 mtd0
+#endif
+
+/* Flash mount point */
+#define FLASH_MOUNT_POINT   "/sda"
+
+/* In this example, MTD_0 is used as mtd interface for littlefs or spiffs */
+/* littlefs and spiffs basic usage are shown */
+#ifdef MTD_0
+/* File system descriptor initialization */
+#if defined(MODULE_LITTLEFS)
+/* include file system header for driver */
+#include "fs/littlefs_fs.h"
+
+/* file system specific descriptor
+ * for littlefs, some fields can be tweaked to define the size
+ * of the partition, see header documentation.
+ * In this example, default behavior will be used, i.e. the entire
+ * memory will be used (parameters come from mtd) */
+static littlefs_desc_t fs_desc = {
+    .lock = MUTEX_INIT,
+};
+
+/* littlefs file system driver will be used */
+#define FS_DRIVER littlefs_file_system
+
+#elif defined(MODULE_LITTLEFS2)
+/* include file system header for driver */
+#include "fs/littlefs2_fs.h"
+
+/* file system specific descriptor
+ * for littlefs2, some fields can be tweaked to define the size
+ * of the partition, see header documentation.
+ * In this example, default behavior will be used, i.e. the entire
+ * memory will be used (parameters come from mtd) */
+/*static littlefs2_desc_t fs_desc = {
+    .lock = MUTEX_INIT,
+};*/
+
+/* littlefs file system driver will be used */
+#define FS_DRIVER littlefs2_file_system
+
+#elif defined(MODULE_SPIFFS)
+/* include file system header */
+#include "fs/spiffs_fs.h"
+
+/* file system specific descriptor
+ * as for littlefs, some fields can be changed if needed,
+ * this example focus on basic usage, i.e. entire memory used */
+static spiffs_desc_t fs_desc = {
+    .lock = MUTEX_INIT,
+};
+
+/* spiffs driver will be used */
+#define FS_DRIVER spiffs_file_system
+
+#elif defined(MODULE_FATFS_VFS)
+/* include file system header */
+#include "fs/fatfs.h"
+
+/* file system specific descriptor
+ * as for littlefs, some fields can be changed if needed,
+ * this example focus on basic usage, i.e. entire memory used */
+static fatfs_desc_t fs_desc;
+
+/* provide mtd devices for use within diskio layer of fatfs */
+mtd_dev_t *fatfs_mtd_devs[FF_VOLUMES];
+
+/* fatfs driver will be used */
+#define FS_DRIVER fatfs_file_system
+#endif
+
+/* this structure defines the vfs mount point:
+ *  - fs field is set to the file system driver
+ *  - mount_point field is the mount point name
+ *  - private_data depends on the underlying file system. For both spiffs and
+ *  littlefs, it needs to be a pointer to the file system descriptor */
+/*static vfs_mount_t flash_mount = {
+    .fs = &FS_DRIVER,
+    .mount_point = FLASH_MOUNT_POINT,
+    .private_data = &fs_desc,
+};*/
+#endif /* MTD_0 */
+
+/* Add simple macro to check if an MTD device together with a filesystem is
+ * compiled in */
+#if  defined(MTD_0) && \
+     (defined(MODULE_SPIFFS) || \
+      defined(MODULE_LITTLEFS) || \
+      defined(MODULE_LITTLEFS2) || \
+      defined(MODULE_FATFS_VFS))
+#define FLASH_AND_FILESYSTEM_PRESENT    1
+#else
+#define FLASH_AND_FILESYSTEM_PRESENT    0
+#endif
+
+/* constfs example */
+#include "fs/constfs.h"
+
 
 static bool _proxied = false;
 static sock_udp_ep_t _proxy_remote;
@@ -251,11 +372,6 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
                                  COAP_FORMAT_TEXT, (uint8_t *) succ, strlen(succ));
     }*/
 
-    /*int i = 0;
-    for (;i<=pdu->payload_len;i++) {
-        payload_mio[i] = pdu->payload[i];
-        //printf("%c\n", rand[i]);
-    }*/
     char payload_mio[pdu->payload_len];
     memcpy(payload_mio, pdu->payload, pdu->payload_len);
 
@@ -283,12 +399,47 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
         token = strtok(NULL, "#");
     }
 
-    /*if (!strcmp(seq, "0")) {
-        FILE *f = fopen("seq.txt", "w");
-        fprintf(f, "%c\n", seq[0]);
+    #if defined(MODULE_NEWLIB) || defined(MODULE_PICOLIBC)
+    FILE *f = fopen("seq.txt", "r");
+    #define SEQUENCE "999\n"
+    if (f == NULL) {
+        static constfs_file_t constfs_files[] = {
+            {
+                .path = "/seq.txt",
+                .size = sizeof(SEQUENCE),
+                .data = (const uint8_t *)"0",
+            }
+        };
+                /* this is the constfs specific descriptor */
+        static constfs_t constfs_desc = {
+            .nfiles = ARRAY_SIZE(constfs_files),
+            .files = constfs_files,
+        };
+
+        /* constfs mount point, as for previous example, it needs a file system driver,
+         * a mount point and private_data as a pointer to the constfs descriptor */
+        static vfs_mount_t const_mount = {
+            .fs = &constfs_file_system,
+            .mount_point = "/const",
+            .private_data = &constfs_desc,
+        };
+        /*f = fopen("seq.txt", "w");
+        fwrite("0", 1, strlen("0"), f);
+        fclose(f);*/
+        puts("l'abbiamo creato");
+            int res = vfs_mount(&const_mount);
+        if (res < 0) {
+            puts("Error while mounting constfs");
+        }
+        else {
+            puts("constfs mounted successfully");
+        }
+    }
+    else {
+        puts("già c'è");
         fclose(f);
-        puts("file funge");
-    }*/
+    }
+    #endif
 
     // TODO leggere e scrivere sequenza da file
 
@@ -329,8 +480,8 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     puts("HMAC(): finish");
     hmac_sha256_final(&sha2561, digest1);*/
 
-    //size_t result_len = 0;
-    //uint32_t result = COAP_CODE_204;
+    size_t result_len = 0;
+    uint32_t result = COAP_CODE_204;
     uint8_t digest[SHA256_DIGEST_LENGTH];
     //int res = strcmp((const char *)digest1,(const char *)autn);
     //if (res == 0) {
@@ -343,16 +494,19 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
         puts("HMAC(): update");
         hmac_sha256_update(&sha256, final_str, strlen(final_str));
 
-    puts("HMAC(): finish");
-    hmac_sha256_final(&sha256, digest);
-    //result_len = SHA256_DIGEST_LENGTH * 2;
+        puts("HMAC(): finish");
+        hmac_sha256_final(&sha256, digest);
+        result_len = SHA256_DIGEST_LENGTH * 2;
+
+    ssize_t reply_len = coap_build_reply(pdu, result, buf, len, 0);
+    uint8_t *pkt_pos = (uint8_t*)pdu->hdr + reply_len;
     //}
 
-    gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
-    coap_opt_add_format(pdu, COAP_FORMAT_TEXT);
-    size_t resp_len = coap_opt_finish(pdu, COAP_OPT_FINISH_PAYLOAD);
+    //gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+    //coap_opt_add_format(pdu, COAP_FORMAT_TEXT);
+    //size_t resp_len = coap_opt_finish(pdu, COAP_OPT_FINISH_PAYLOAD);
 
-    return resp_len + sizeof(digest);
+    //return resp_len + sizeof(digest);
 
     //puts("Start: Test random number generator");
 
@@ -360,12 +514,12 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
 
     //puts("End: Test finished");
 
-    /*if (result_len) {
+    if (result_len) {
         *pkt_pos++ = 0xFF;
         pkt_pos += fmt_bytes_hex((char *)pkt_pos, digest, sizeof(digest));
     }
 
-    return pkt_pos - (uint8_t*)pdu->hdr;*/
+    return pkt_pos - (uint8_t*)pdu->hdr;
 
     //return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
                              //COAP_FORMAT_TEXT, (uint8_t*)pdu->payload, pdu->payload_len);

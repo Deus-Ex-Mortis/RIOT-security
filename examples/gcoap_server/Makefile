@@ -76,8 +76,6 @@ DEVELHELP ?= 1
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1
 
-include $(RIOTBASE)/Makefile.include
-
 # For now this goes after the inclusion of Makefile.include so Kconfig symbols
 # are available. Only set configuration via CFLAGS if Kconfig is not being used
 # for this module.
@@ -102,4 +100,20 @@ host-tools:
 
 #CONFIG_GNRC_IPV6_NIB_SLAAC=1
 
+# Use MTD (flash layer)
+USEMODULE += mtd
+# USEMODULE += mtd_sdcard
+
+# Use VFS
+USEMODULE += vfs
+
+# Use a file system
+# USEMODULE += littlefs
+USEMODULE += littlefs2
+# USEMODULE += spiffs
+# USEMODULE += fatfs_vfs
+USEMODULE += constfs
+# USEMODULE += devfs
+
+include $(RIOTBASE)/Makefile.include
 include $(RIOTMAKE)/default-radio-settings.inc.mk
