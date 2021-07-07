@@ -343,9 +343,12 @@ static ssize_t _stats_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *c
 
 static ssize_t _key(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx) {
     (void) ctx;
-    char chiave[10];
-    sprintf(chiave, "%ld\n", (long)puf_sram_seed);
-    const void *key = (const void *)chiave;
+    //char chiave[10];
+    //sprintf(chiave, "%ld\n", (long)puf_sram_seed);
+    char key[64];
+    memset((void*)key, 0x0, 64);
+    snprintf(key,sizeof(key),"%lu",puf_sram_seed);
+    //const void *key = (const void *)chiave;
 
     puts("\nInvio Chiave");
 
@@ -375,31 +378,38 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     char payload_mio[pdu->payload_len];
     memcpy(payload_mio, pdu->payload, pdu->payload_len);
 
-    int a = 0;
-    char  random_num[6] = {0};
-    char seq[3] = {0};
+    char payload[128] = {0};
+    char random_num[8] = {0};
+    char seq[8] = {0};
     char autn[64] = {0};
-    char * token = strtok(payload_mio, "#");
-    // loop through the string to extract all other tokens
-    while( token != NULL ) {
-        //printf(" %s\n", token); //printing each token
-        if (a == 0) {
-            strcpy(random_num, token);
-            printf("%s\n", random_num);
-        }
-        if (a == 1) {
-            strcpy(seq, token);
-            printf("%s\n", seq);
-        }
-        if (a == 2) {
-            strcpy(autn, token);
-            printf("%s\n", autn);
-        }
-        a++;
-        token = strtok(NULL, "#");
-    }
 
-    #if defined(MODULE_NEWLIB) || defined(MODULE_PICOLIBC)
+    char xres_string[] = "XRES";
+    char autn_string[] = "AUTN";
+
+    char * pch;
+
+    /* transfer the payload from the PDU to our internal buffer */
+    memcpy(payload, (char *)pdu->payload, pdu->payload_len);
+
+    //printf("payload is %s pdu len is %d\n",payload, pdu->payload_len);
+
+    /* divide the payload into three pieces divider by char # */
+    pch = strtok(payload,"#");
+    strcpy(random_num, pch);
+
+    pch = strtok(NULL,"#");
+    strcpy(seq, pch);
+
+    pch = strtok(NULL,"#");
+    strcpy(autn, pch);
+
+    memset(payload, 0, sizeof(payload));
+
+    strcat(payload,random_num);
+    strcat(payload,seq);
+    strcat(payload,autn_string);
+
+    /*#if defined(MODULE_NEWLIB) || defined(MODULE_PICOLIBC)
     FILE *f = fopen("seq.txt", "r");
     #define SEQUENCE "999\n"
     if (f == NULL) {
@@ -410,22 +420,20 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
                 .data = (const uint8_t *)"0",
             }
         };
-                /* this is the constfs specific descriptor */
+                // this is the constfs specific descriptor
         static constfs_t constfs_desc = {
             .nfiles = ARRAY_SIZE(constfs_files),
             .files = constfs_files,
         };
 
-        /* constfs mount point, as for previous example, it needs a file system driver,
-         * a mount point and private_data as a pointer to the constfs descriptor */
+        // constfs mount point, as for previous example, it needs a file system driver,
+         // a mount point and private_data as a pointer to the constfs descriptor
         static vfs_mount_t const_mount = {
             .fs = &constfs_file_system,
             .mount_point = "/const",
             .private_data = &constfs_desc,
         };
-        /*f = fopen("seq.txt", "w");
-        fwrite("0", 1, strlen("0"), f);
-        fclose(f);*/
+
         puts("l'abbiamo creato");
             int res = vfs_mount(&const_mount);
         if (res < 0) {
@@ -439,90 +447,77 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
         puts("già c'è");
         fclose(f);
     }
-    #endif
+    #endif*/
 
     // TODO leggere e scrivere sequenza da file
 
-    char mid_str[8] = {0};
-    char final_str[15] = {0};
-    char xres_string[] = "XRES";
-    puts("uno");
-    //char * autn_string = "AUTN";
-    //puts("due");
-    strcat(mid_str,seq);
-    printf("%s\n", mid_str);
-    strcat(mid_str,xres_string);
-    printf("%s\n", mid_str);
-    //char mid_str = strcat(rand, autn_string);
-    //printf("%s\n", autn_mid);
-    strcat(final_str, random_num);
-    printf("%s\n", final_str);
-    strcat(final_str, mid_str);
-    printf("%s\n", final_str);
-    printf("%d\n", strlen(final_str));
-    //char final_str = strcat(seq, autn_mid);
-    //printf("%s", message_autn);
+    printf("payload strcat %s\n",payload);
 
-    /*
-    static hmac_context_t sha2561;
-    uint8_t digest1[SHA256_DIGEST_LENGTH];*/
+    /* prepare for hmac generation */
+    char key[64];
+    /* prepare a dummy key */
+    memset((void*)key, 0x0, 64);
+    static uint8_t hmac[SHA256_DIGEST_LENGTH];
 
-    char chiave[10];
-    sprintf(chiave, "%ld\n", (long)puf_sram_seed);
-    const void *key = (const void *)chiave;
+    snprintf(key,sizeof(key),"%lu",puf_sram_seed);
 
-    /*puts("\nHMAC(): init");
-    hmac_sha256_init(&sha2561, key, strlen(key));
+    //printf("KEY %s\n", key);
 
-    puts("HMAC(): update");
-    hmac_sha256_update(&sha2561, message_autn, strlen(message_autn));
+    hmac_sha256(key, sizeof(key), payload, strlen(payload), hmac);
 
-    puts("HMAC(): finish");
-    hmac_sha256_final(&sha2561, digest1);*/
-
-    size_t result_len = 0;
-    uint32_t result = COAP_CODE_204;
-    uint8_t digest[SHA256_DIGEST_LENGTH];
-    //int res = strcmp((const char *)digest1,(const char *)autn);
-    //if (res == 0) {
-        //Inizia hmac
-        static hmac_context_t sha256;
-
-        puts("\nHMAC(): init");
-        hmac_sha256_init(&sha256, key, strlen(key));
-
-        puts("HMAC(): update");
-        hmac_sha256_update(&sha256, final_str, strlen(final_str));
-
-        puts("HMAC(): finish");
-        hmac_sha256_final(&sha256, digest);
-        result_len = SHA256_DIGEST_LENGTH * 2;
-
-    ssize_t reply_len = coap_build_reply(pdu, result, buf, len, 0);
-    uint8_t *pkt_pos = (uint8_t*)pdu->hdr + reply_len;
-    //}
-
-    //gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
-    //coap_opt_add_format(pdu, COAP_FORMAT_TEXT);
-    //size_t resp_len = coap_opt_finish(pdu, COAP_OPT_FINISH_PAYLOAD);
-
-    //return resp_len + sizeof(digest);
-
-    //puts("Start: Test random number generator");
-
-    //printf("Success: Data for puf_sram_seed: [0x%08" PRIX32 "]\n", puf_sram_seed);
-
-    //puts("End: Test finished");
-
-    if (result_len) {
-        *pkt_pos++ = 0xFF;
-        pkt_pos += fmt_bytes_hex((char *)pkt_pos, digest, sizeof(digest));
+    int a = 0;
+    for(int i=0; i<SHA256_DIGEST_LENGTH; i++)
+    {
+        printf("%x",hmac[i]);
+        if (hmac[i] == autn[i])
+        {
+            a++;
+            if (a == 64)
+            {
+                puts("autenticato");
+            }
+        }
     }
 
-    return pkt_pos - (uint8_t*)pdu->hdr;
+    /* cleanup, we want to reuse the payload in order to copy the hmac in it and send it back to coap */
+    memset(payload, 0, sizeof(payload));
 
-    //return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
-                             //COAP_FORMAT_TEXT, (uint8_t*)pdu->payload, pdu->payload_len);
+    strcat(payload,random_num);
+    strcat(payload,seq);
+    strcat(payload,xres_string);
+
+    printf("\npayload strcat %s\n",payload);
+
+    static uint8_t hmac2[SHA256_DIGEST_LENGTH];
+    hmac_sha256(key, sizeof(key), payload, strlen(payload), hmac2);
+
+    memset(payload, 0, sizeof(payload));
+
+    for(int i=0; i<SHA256_DIGEST_LENGTH; i++)
+    {
+        char tmp[3]={0,0,'\0'};
+        printf("%x",hmac2[i]);
+        snprintf(tmp, sizeof(tmp), "%x", hmac2[i]);
+
+        strcat(payload,tmp);
+    }
+
+    printf("\n%s len %d\n",payload,strlen(payload));
+
+    gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+    coap_opt_add_format(pdu, COAP_FORMAT_TEXT);
+    size_t resp_len = coap_opt_finish(pdu, COAP_OPT_FINISH_PAYLOAD);
+
+    /* write the payload in the response buffer */
+    if (pdu->payload_len >= strlen(payload)) {
+        memcpy(pdu->payload, payload, strlen(payload));
+        return resp_len + strlen(payload);
+    }
+    else {
+        puts("gcoap_cli: msg buffer too small");
+        return gcoap_response(pdu, buf, len, COAP_CODE_INTERNAL_SERVER_ERROR);
+    }
+
 }
 
 static ssize_t _riot_board_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx)
