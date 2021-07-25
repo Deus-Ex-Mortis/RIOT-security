@@ -294,64 +294,84 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
 
     hmac_sha256(key, sizeof(key), payload, strlen(payload), hmac);
 
-    if (!strcmp(autn, autn))
+    if (strcmp(autn, autn))
     {
         puts("RIUSCITO");
     }
 
-    //int a = 0;
-    /*for(int i=0; i<SHA256_DIGEST_LENGTH; i++)
-    {
-        printf("%x",hmac[i]);
-        if (hmac[i] == autn[i])
-        {
-            a++;
-            if (a == 64)
-            {
-                puts("autenticato");
-            }
-        }
-    }*/
-
     /* cleanup, we want to reuse the payload in order to copy the hmac in it and send it back to coap */
-    memset(payload, 0, sizeof(payload));
-
-    strcat(payload,random_num);
-    strcat(payload,seq);
-    strcat(payload,xres_string);
-
-    printf("\npayload strcat %s\n",payload);
-
-    static uint8_t hmac2[SHA256_DIGEST_LENGTH];
-    hmac_sha256(key, sizeof(key), payload, strlen(payload), hmac2);
-
     memset(payload, 0, sizeof(payload));
 
     for(int i=0; i<SHA256_DIGEST_LENGTH; i++)
     {
         char tmp[3]={0,0,'\0'};
-        printf("%x",hmac2[i]);
-        snprintf(tmp, sizeof(tmp), "%x", hmac2[i]);
+        //printf("%x",hmac[i]);
+        snprintf(tmp, sizeof(tmp), "%x", hmac[i]);
 
         strcat(payload,tmp);
     }
 
-    printf("\n%s len %d\n",payload,strlen(payload));
-
-    gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
-    coap_opt_add_format(pdu, COAP_FORMAT_TEXT);
-    size_t resp_len = coap_opt_finish(pdu, COAP_OPT_FINISH_PAYLOAD);
-
-    /* write the payload in the response buffer */
-    if (pdu->payload_len >= strlen(payload)) {
-        memcpy(pdu->payload, payload, strlen(payload));
-        return resp_len + strlen(payload);
+    int a = 0;
+    int j = 0;
+    for(int i=0; i<64; i++)
+    {
+        //printf("%x",hmac[i]);
+        //printf("%c",autn[i]);
+        if (autn[i] == payload[j])
+        {
+            a++;
+        }
+        else
+        {
+            j--;
+        }
+        j++;
     }
-    else {
-        puts("gcoap_cli: msg buffer too small");
-        return gcoap_response(pdu, buf, len, COAP_CODE_INTERNAL_SERVER_ERROR);
-    }
+    //printf("\n%d\n", a);
+    if (a >= 58) {
+        //puts("autenticato AUTN");
 
+        /* cleanup, we want to reuse the payload in order to copy the hmac in it and send it back to coap */
+        memset(payload, 0, sizeof(payload));
+
+        strcat(payload, random_num);
+        strcat(payload, seq);
+        strcat(payload, xres_string);
+
+        printf("\npayload strcat %s\n", payload);
+
+        static uint8_t hmac2[SHA256_DIGEST_LENGTH];
+        hmac_sha256(key, sizeof(key), payload, strlen(payload), hmac2);
+
+        memset(payload, 0, sizeof(payload));
+
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+            char tmp[3] = {0, 0, '\0'};
+            printf("%x", hmac2[i]);
+            snprintf(tmp, sizeof(tmp), "%x", hmac2[i]);
+
+            strcat(payload, tmp);
+        }
+
+        printf("\n%s len %d\n", payload, strlen(payload));
+
+        gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+        coap_opt_add_format(pdu, COAP_FORMAT_TEXT);
+        size_t resp_len = coap_opt_finish(pdu, COAP_OPT_FINISH_PAYLOAD);
+
+        /* write the payload in the response buffer */
+        if (pdu->payload_len >= strlen(payload)) {
+            memcpy(pdu->payload, payload, strlen(payload));
+            return resp_len + strlen(payload);
+        } else {
+            puts("gcoap_cli: msg buffer too small");
+            return gcoap_response(pdu, buf, len, COAP_CODE_INTERNAL_SERVER_ERROR);
+        }
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 static ssize_t _riot_board_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx)
