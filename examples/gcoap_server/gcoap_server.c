@@ -299,12 +299,10 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
 
     for(int i=0; i<SHA256_DIGEST_LENGTH; i++)
     {
-        char tmp[3]={0,0,'\0'};
-        //printf("%x",hmac[i]);
-        snprintf(tmp, sizeof(tmp), "%x", hmac[i]);
-
-        strcat(payload,tmp);
+        sprintf(payload + (i * 2), "%02x", hmac[i]);
     }
+
+    payload[64] = 0;
 
     int a = 0;
     int j = 0;
@@ -342,12 +340,10 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
         memset(payload, 0, sizeof(payload));
 
         for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-            char tmp[3] = {0, 0, '\0'};
-            //printf("%x", hmac2[i]);
-            snprintf(tmp, sizeof(tmp), "%x", hmac2[i]);
-
-            strcat(payload, tmp);
+            sprintf(payload + (i * 2), "%02x", hmac2[i]);
         }
+
+        payload[64] = 0;
 
         //printf("\n%s len %d\n", payload, strlen(payload));
 
