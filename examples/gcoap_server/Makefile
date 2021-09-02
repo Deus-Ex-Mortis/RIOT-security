@@ -1,7 +1,7 @@
 # Default Makefile, for host native GNRC-based networking
 
 # name of your application
-APPLICATION = gcoap_example
+APPLICATION = gcoap_server
 
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
@@ -30,8 +30,6 @@ USEMODULE += shell_commands
 USEMODULE += ps
 
 USEMODULE += hashes
-
-CFLAGS += -DTHREAD_STACKSIZE_MAIN=\(3*THREAD_STACKSIZE_DEFAULT\)
 
 ifneq ($(BOARD),native)
   # BOARDS LIKE nrf52dk will not work
