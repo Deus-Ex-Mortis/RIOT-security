@@ -23,7 +23,12 @@ Next, in another terminal, type:
 Which adds a routable address on the riot0 host interface.
 
 ## Starting the server
-Compile the server with the following command:
+First you have to compile the application. If you want to enable SRAM-PUF key generation support please de-comment those two lines in the Makefile:
+
+      FEATURES_REQUIRED += puf_sram
+      CFLAGS += -DPUF_SRAM
+
+In any case, just type the following command to compile and flash the nrf board:
 
 `sudo BOARD=nrf52840dk make clean flash all term -j4`
 

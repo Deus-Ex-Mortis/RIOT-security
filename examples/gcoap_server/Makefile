@@ -37,7 +37,10 @@ CFLAGS += -DTHREAD_STACKSIZE_MAIN=\(3*THREAD_STACKSIZE_DEFAULT\)
 
 include $(RIOTBASE)/tests/Makefile.tests_common
 
-FEATURES_REQUIRED += puf_sram
+# Enable the TWO lines below to enable support for SRAM-PUF key generation
+#FEATURES_REQUIRED += puf_sram
+#CFLAGS += -DPUF_SRAM
+
 DISABLE_MODULE += test_utils_interactive_sync
 
 # Change this to 0 to not use ethos

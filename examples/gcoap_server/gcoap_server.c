@@ -24,7 +24,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+
+#ifdef PUF_SRAM
 #include "puf_sram.h"
+#endif
+
 #include "net/gcoap.h"
 #include "od.h"
 #include "fmt.h"
@@ -226,9 +230,11 @@ static ssize_t _stats_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *c
 static ssize_t _key(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx) {
     (void) ctx;
 
+#ifdef PUF_SRAM
     memset((void*)key, 0x0, sizeof(key));
     snprintf(key,sizeof(key),"%lu",puf_sram_seed);
-
+#endif
+    
     printf("\nSending key...\n");
 
     return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
