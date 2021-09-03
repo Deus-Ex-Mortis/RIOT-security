@@ -34,8 +34,6 @@
 #include "debug.h"
 #include "board.h" /* MTD_0 is defined in board.h */
 
-
-
 static bool _proxied = false;
 static sock_udp_ep_t _proxy_remote;
 static char proxy_uri[64];
@@ -48,6 +46,8 @@ static ssize_t _stats_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *c
 static ssize_t _riot_board_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx);
 static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx);
 static ssize_t _key(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx);
+
+char key[]= "cfb8cdb1526a8c4f3372501b83dadb27";
 
 /* CoAP resources. Must be sorted by path (ASCII order). */
 static const coap_resource_t _resources[] = {
@@ -225,14 +225,11 @@ static ssize_t _stats_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *c
 
 static ssize_t _key(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx) {
     (void) ctx;
-    //char chiave[10];
-    //sprintf(chiave, "%ld\n", (long)puf_sram_seed);
-    char key[64];
-    memset((void*)key, 0x0, 64);
-    snprintf(key,sizeof(key),"%lu",puf_sram_seed);
-    //const void *key = (const void *)chiave;
 
-    puts("\nInvio Chiave");
+    memset((void*)key, 0x0, sizeof(key));
+    snprintf(key,sizeof(key),"%lu",puf_sram_seed);
+
+    printf("\nInvio Chiave\n");
 
     return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
                              COAP_FORMAT_TEXT, (uint8_t *) key, strlen(key));
@@ -283,12 +280,7 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     printf("payload strcat %s\n",payload);
 
     /* prepare for hmac generation */
-    char key[64];
-    /* prepare a dummy key */
-    memset((void*)key, 0x0, 64);
     static uint8_t hmac[SHA256_DIGEST_LENGTH];
-
-    snprintf(key,sizeof(key),"%lu",puf_sram_seed);
 
     printf("KEY %s\n", key);
 
