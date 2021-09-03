@@ -1,11 +1,3 @@
-/*
- * Copyright (c) 2015-2016 Ken Bannister. All rights reserved.
- *
- * This file is subject to the terms and conditions of the GNU Lesser
- * General Public License v2.1. See the file LICENSE in the top level
- * directory for more details.
- */
-
 /**
  * @ingroup     examples
  * @{
@@ -13,8 +5,8 @@
  * @file
  * @brief       gcoap example
  *
- * @author      Ken Bannister <kb2ma@runbox.com>
- *sbenf
+ * @author      Alberto La Rosa <albertolarosa98@gmail.com>
+ *
  * @}
  */
 
