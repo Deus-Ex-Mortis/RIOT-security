@@ -1,5 +1,3 @@
-# Default Makefile, for host native GNRC-based networking
-
 # name of your application
 APPLICATION = gcoap_server
 
@@ -99,18 +97,18 @@ host-tools:
 #CONFIG_GNRC_IPV6_NIB_SLAAC=1
 
 # Use MTD (flash layer)
-USEMODULE += mtd
+#USEMODULE += mtd
 # USEMODULE += mtd_sdcard
 
 # Use VFS
-USEMODULE += vfs
+#USEMODULE += vfs
 
 # Use a file system
 # USEMODULE += littlefs
-USEMODULE += littlefs2
+#USEMODULE += littlefs2
 # USEMODULE += spiffs
 # USEMODULE += fatfs_vfs
-USEMODULE += constfs
+#USEMODULE += constfs
 # USEMODULE += devfs
 
 include $(RIOTBASE)/Makefile.include

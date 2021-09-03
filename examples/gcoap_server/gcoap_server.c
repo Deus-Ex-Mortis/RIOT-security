@@ -229,7 +229,7 @@ static ssize_t _key(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ctx) {
     memset((void*)key, 0x0, sizeof(key));
     snprintf(key,sizeof(key),"%lu",puf_sram_seed);
 
-    printf("\nInvio Chiave\n");
+    printf("\nSending key...\n");
 
     return coap_reply_simple(pdu, COAP_CODE_CONTENT, buf, len,
                              COAP_FORMAT_TEXT, (uint8_t *) key, strlen(key));
@@ -275,14 +275,14 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     strcat(payload,autn_string);
 
 
-    // TODO leggere e scrivere sequenza da file
+    // TODO need file system support!!
 
-    printf("payload strcat %s\n",payload);
+    printf("Payload is: %s\n",payload);
 
     /* prepare for hmac generation */
     static uint8_t hmac[SHA256_DIGEST_LENGTH];
 
-    printf("KEY %s\n", key);
+    printf("Key is: %s\n", key);
 
     hmac_sha256(key, sizeof(key), payload, strlen(payload), hmac);
 
@@ -314,8 +314,8 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     }
     //printf("\n%d\n", a);
     if (a >= 58) {
-        puts("Autenticato AUTN");
-        puts("Invio XRES");
+        puts("AUTN Authenticated");
+        puts("Sending XRES...");
 
         /* cleanup, we want to reuse the payload in order to copy the hmac in it and send it back to coap */
         memset(payload, 0, sizeof(payload));
@@ -324,7 +324,7 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
         strcat(payload, seq);
         strcat(payload, xres_string);
 
-        printf("\npayload strcat %s\n", payload);
+        printf("\nPayload is: %s\n", payload);
 
         static uint8_t hmac2[SHA256_DIGEST_LENGTH];
         hmac_sha256(key, sizeof(key), payload, strlen(payload), hmac2);
@@ -354,6 +354,7 @@ static ssize_t _auth_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, void *ct
     }
     else
     {
+        //TODO: to be handled!!
         return 1;
     }
 }
