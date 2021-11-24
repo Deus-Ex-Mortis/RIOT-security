@@ -9,7 +9,12 @@ RIOTBASE ?= $(CURDIR)/../..
 
 # Include packages that pull up and auto-init the link layer.
 # NOTE: 6LoWPAN will be included if IEEE802.15.4 devices are present
-#USEMODULE += gnrc_netdev_default
+
+ifeq ($(BOARD),native)
+  # If we are using native we do not care about ethos
+  USEMODULE += gnrc_netdev_default
+endif
+
 USEMODULE += auto_init_gnrc_netif
 # Specify the mandatory networking modules
 USEMODULE += gnrc_ipv6_default
@@ -43,8 +48,11 @@ include $(RIOTBASE)/tests/Makefile.tests_common
 
 DISABLE_MODULE += test_utils_interactive_sync
 
-# Change this to 0 to not use ethos
-USE_ETHOS ?= 1
+ifneq ($(BOARD),native)
+  # We do want to use some network support on physical boards
+  # Change this to 0 to not use ethos
+  USE_ETHOS ?= 1
+endif
 
 ifeq (1,$(USE_ETHOS))
   USEMODULE += stdio_ethos
