@@ -3,9 +3,10 @@
  * @{
  *
  * @file
- * @brief       gcoap example
+ * @brief       Demonstration of a RIOT-AKA authentication over CoAP
  *
  * @author      Alberto La Rosa <albertolarosa98@gmail.com>
+ * @author      Gabriele Restuccia <gabriele.restuccia@cnit.it>
  *
  * @}
  */
