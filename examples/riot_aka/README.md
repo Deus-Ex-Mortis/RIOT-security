@@ -5,6 +5,47 @@ This is a coap server used to test authentication via the RIOT-AKA model on IOT 
 It can only be used on a physical board and has been tested on nrf52840dk, other boards may not have enough RAM and/or flash memory.
 Go inside the folder `/RIOT/examples/riot_aka` and:
 
+### On natives ONLY:
+
+
+Compile the application:
+
+
+```bash
+make clean all -j4
+```
+
+Create a tap interface:
+
+
+```bash
+sudo ip tuntap add tap0 mode tap user ${USER}
+sudo ip link set tap0 up
+```
+
+Start the application:
+
+```bash
+PORT=tap0 make term
+```
+
+To verify that there is connectivity between RIOT and Linux, go to the
+RIOT console and run `ifconfig`:
+
+    > ifconfig
+    Iface  7   HWaddr: ce:f5:e1:c5:f7:5a
+               inet6 addr: ff02::1/128  scope: local [multicast]
+               inet6 addr: fe80::ccf5:e1ff:fec5:f75a/64  scope: local
+               inet6 addr: ff02::1:ffc5:f75a/128  scope: local [multicast]
+
+Copy the link-local address of the RIOT node (prefixed with `fe80`) and
+try to ping it **from the Linux node**:
+
+    ping6 fe80::ccf5:e1ff:fec5:f75a%tap0
+
+
+### On nrf52840dk ONLY:
+
 Build `ethos` and `uhcpd` with the following commands:
 
 ```bash
