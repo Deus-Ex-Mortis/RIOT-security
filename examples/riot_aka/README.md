@@ -3,7 +3,7 @@ This is a coap server used to test authentication via the RIOT-AKA model on IOT 
 
 ## Device configuration
 It can only be used on a physical board and has been tested on nrf52840dk, other boards may not have enough RAM and/or flash memory.
-Go inside the folder `/RIOT/examples/gcoap_server` and:
+Go inside the folder `/RIOT/examples/riot_aka` and:
 
 Build `ethos` and `uhcpd` with the following commands:
 
